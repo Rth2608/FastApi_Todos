@@ -1,8 +1,14 @@
 [
   {
-    "title": "20201608",
-    "description": "유태훈",
+    "title": "채소",
+    "description": "토마토",
     "completed": false,
     "id": 1
+  },
+  {
+    "title": "과일",
+    "description": "바나나",
+    "completed": false,
+    "id": 2
   }
 ]

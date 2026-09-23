@@ -1,13 +1,13 @@
 services:
   fastapi-app:
     build:
-      context: ./fastapi-app      # DockerfileÀÌ À§Ä¡ÇÑ µğ·ºÅä¸® °æ·Î
-      dockerfile: Dockerfile      # Dockerfile ÀÌ¸§ (»ı·« °¡´É, ±âº»°ªÀº 'Dockerfile')
+      context: ./fastapi-app      # Dockerfileì´ ìœ„ì¹˜í•œ ë””ë ‰í† ë¦¬ ê²½ë¡œ
+      dockerfile: Dockerfile      # Dockerfile ì´ë¦„ (ìƒëµ ê°€ëŠ¥, ê¸°ë³¸ê°’ì€ 'Dockerfile')
     container_name: FastApi-app
     ports:
       - "5001:8000"
-    restart: unless-stopped       # ¼­¹ö ÀçºÎÆÃ¡¤¿À·ù ½Ã ÀÚµ¿ Àç½ÃÀÛ
+    restart: unless-stopped       # ì„œë²„ ì¬ë¶€íŒ…Â·ì˜¤ë¥˜ ì‹œ ìë™ ì¬ì‹œì‘
     security_opt:
-      - no-new-privileges:true    # ÄÁÅ×ÀÌ³Ê ¾È¿¡¼­ ±ÇÇÑ »ó½Â Â÷´Ü
+      - no-new-privileges:true    # ì»¨í…Œì´ë„ˆ ì•ˆì—ì„œ ê¶Œí•œ ìƒìŠ¹ ì°¨ë‹¨
     cap_drop:
-      - ALL                       # ºÒÇÊ¿äÇÑ Ä¿³Î ±ÇÇÑ ¸ğµÎ Á¦°Å
+      - ALL                       # ë¶ˆí•„ìš”í•œ ì»¤ë„ ê¶Œí•œ ëª¨ë‘ ì œê±°

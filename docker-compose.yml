@@ -6,8 +6,15 @@ services:
     container_name: FastApi-app
     ports:
       - "5001:8000"
-    restart: unless-stopped       # 서버 재부팅·오류 시 자동 재시작
-    security_opt:
-      - no-new-privileges:true    # 컨테이너 안에서 권한 상승 차단
-    cap_drop:
-      - ALL                       # 불필요한 커널 권한 모두 제거
+
+  sonarqube:
+    image: sonarqube:26.9.0.129388-community  
+    container_name: sonarqube
+    read_only: true                             # 컨테이너 파일시스템 읽기 전용 (아래 볼륨과 /tmp만 쓰기 가능)
+    ports:
+      - "9000:9000"
+    environment:
+      - SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true 
+  sonarqube_extensions:
+  sonarqube_logs:
+  sonarqube_temp:

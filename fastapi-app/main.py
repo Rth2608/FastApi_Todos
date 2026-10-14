@@ -3,6 +3,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
+from prometheus_fastapi_instrumentator import Instrumentator  # ← 추가
 from pydantic import BaseModel, Field
 
 BASE_DIR = Path(__file__).resolve().parent       # main.py 가 있는 폴더
@@ -13,6 +14,9 @@ if not TODO_FILE.exists():                       # 없으면 빈 목록으로 �
     TODO_FILE.write_text("[]", encoding="utf-8")
 
 app = FastAPI(title="To-Do List API")
+
+# ← 추가: Prometheus 메트릭 엔드포인트(/metrics). 요청 수·응답 시간 등을 자동으로 수집
+Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
 
 
 class TodoIn(BaseModel):                         # 클라이언트가 보내는 데이터 (id 없음)

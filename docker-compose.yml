@@ -91,11 +91,28 @@ services:
     networks:
       - loadtest-net
 
+  influxdb:
+    # JMeter 기본 Backend Listener 와 Grafana JMeter 대시보드(ID 5496)가 InfluxQL 기반이라 1.x 사용
+    image: influxdb:1.8
+    container_name: influxdb
+    environment:
+      - INFLUXDB_DB=jmeter
+      - INFLUXDB_HTTP_AUTH_ENABLED=false
+    ports:
+      # JMeter 는 --network host 로 127.0.0.1 에 접속, Grafana 는 compose 네트워크로 influxdb:8086 접속
+      # → 외부에 열 필요 없음
+      - "127.0.0.1:8086:8086"
+    volumes:
+      - influxdb-data:/var/lib/influxdb
+    networks:
+      - loadtest-net
+
 networks:
   loadtest-net:
     driver: bridge
 
 volumes:
+  influxdb-data:
   sonarqube_conf:
   sonarqube_data:
   sonarqube_logs:

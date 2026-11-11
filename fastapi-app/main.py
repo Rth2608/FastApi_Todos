@@ -1,9 +1,12 @@
 import json
+import logging                                   # ← 추가
+import sys                                       # ← 추가
+import time                                      # ← 추가
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request  # ← Request 추가
 from fastapi.responses import FileResponse
-from prometheus_fastapi_instrumentator import Instrumentator  # ← 추가
+from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel, Field
 
 BASE_DIR = Path(__file__).resolve().parent       # main.py 가 있는 폴더
@@ -15,8 +18,33 @@ if not TODO_FILE.exists():                       # 없으면 빈 목록으로 �
 
 app = FastAPI(title="To-Do List API")
 
-# ← 추가: Prometheus 메트릭 엔드포인트(/metrics). 요청 수·응답 시간 등을 자동으로 수집
+# Prometheus 메트릭 엔드포인트(/metrics). 요청 수·응답 시간 등을 자동으로 수집 (#7)
 Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
+
+# ← 추가: 액세스 로그를 표준 출력(stdout)으로 기록
+#   Docker가 stdout을 컨테이너 로그로 저장하고, Alloy가 그 로그를 읽어 Loki로 전송
+custom_logger = logging.getLogger("custom.access")
+custom_logger.setLevel(logging.INFO)
+custom_logger.addHandler(logging.StreamHandler(sys.stdout))
+custom_logger.propagate = False                  # 상위 로거로 넘겨 두 번 찍히는 것을 방지
+
+# ← 추가: uvicorn 기본 액세스 로그 끄기 (아래 미들웨어가 대신 기록)
+#   켜 두면 요청 1번에 로그가 2줄씩 남아 대시보드 카운트가 2배가 됨
+logging.getLogger("uvicorn.access").disabled = True
+
+
+@app.middleware("http")                          # ← 추가: 모든 요청을 한 줄씩 기록
+async def log_requests(request: Request, call_next):
+    start = time.perf_counter()
+    response = await call_next(request)
+    duration = time.perf_counter() - start
+    client = request.client.host if request.client else "-"
+    # 형식: IP - "METHOD PATH HTTP/1.1" 상태코드 응답시간 → 7번 LogQL 쿼리가 이 형식으로 파싱
+    custom_logger.info(
+        f'{client} - "{request.method} {request.url.path} HTTP/1.1" '
+        f'{response.status_code} {duration:.3f}s'
+    )
+    return response
 
 
 class TodoIn(BaseModel):                         # 클라이언트가 보내는 데이터 (id 없음)

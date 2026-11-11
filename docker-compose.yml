@@ -7,6 +7,8 @@ services:
     container_name: FastApi-app
     ports:
       - "5002:8000"
+    environment:                  # ← #9 추가
+      - PYTHONUNBUFFERED=1        # 로그를 버퍼링 없이 바로 stdout으로 출력
     networks:
       - loadtest-net
 
@@ -91,19 +93,33 @@ services:
     networks:
       - loadtest-net
 
-  influxdb:
-    # JMeter 기본 Backend Listener 와 Grafana JMeter 대시보드(ID 5496)가 InfluxQL 기반이라 1.x 사용
-    image: influxdb:1.8
-    container_name: influxdb
-    environment:
-      - INFLUXDB_DB=jmeter
-      - INFLUXDB_HTTP_AUTH_ENABLED=false
+  loki:                           # ← #9 추가: 로그 저장소
+    image: grafana/loki:3.7.9     # 최신 안정 버전 고정 (2026-11 기준)
+    container_name: loki
+    command: -config.file=/etc/loki/local-config.yaml   # 이미지 기본 설정 (TSDB + schema v13)
     ports:
-      # JMeter 는 --network host 로 127.0.0.1 에 접속, Grafana 는 compose 네트워크로 influxdb:8086 접속
-      # → 외부에 열 필요 없음
-      - "127.0.0.1:8086:8086"
+      - "127.0.0.1:3100:3100"     # 외부 노출 금지 (이 설정의 Loki는 인증이 없음)
     volumes:
-      - influxdb-data:/var/lib/influxdb
+      - loki-data:/loki           # 수집된 로그 보존 (컨테이너를 다시 만들어도 유지)
+    networks:
+      - loadtest-net
+
+  alloy:                          # ← #9 추가: 로그 수집기 (Promtail 대체)
+    image: grafana/alloy:v1.21.3  # 최신 안정 버전 고정 (Alloy 태그는 앞에 v가 붙음)
+    container_name: alloy
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345   # 컨테이너 밖(아래 ports)에서 Alloy UI에 접속할 수 있게
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    ports:
+      - "127.0.0.1:12345:12345"   # Alloy UI. 외부 노출 금지 (로그인 기능 없음)
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro   # 컨테이너 목록·로그를 읽는 통로
+      - alloy-data:/var/lib/alloy/data                 # 어디까지 읽었는지(positions) 저장
+    depends_on:
+      - loki
     networks:
       - loadtest-net
 
@@ -112,9 +128,10 @@ networks:
     driver: bridge
 
 volumes:
-  influxdb-data:
   sonarqube_conf:
   sonarqube_data:
   sonarqube_logs:
   sonarqube_extensions:
   grafana-data:
+  loki-data:                      # ← #9 추가
+  alloy-data:                     # ← #9 추가
